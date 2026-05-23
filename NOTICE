@@ -1,0 +1,40 @@
+devsecops-platform
+Copyright 2026 mohidev-tech
+
+This product includes software developed at mohidev-tech (https://github.com/mohidev-tech).
+
+------------------------------------------------------------------------
+Third-party software referenced or installed at runtime
+------------------------------------------------------------------------
+
+This repo's Helm charts, Terraform modules, and Makefile targets install
+or invoke the following third-party projects. Their licenses apply to the
+installed components; this repo's Apache 2.0 license does not extend to them.
+
+Application dependencies (Go):
+
+* github.com/jackc/pgx/v5
+  MIT License
+  https://github.com/jackc/pgx/blob/master/LICENSE
+
+Platform components installed by `make` targets:
+
+* HashiCorp Vault (Mozilla Public License 2.0)
+* Kyverno (Apache License 2.0)
+* Argo CD (Apache License 2.0)
+* kube-prometheus-stack (Apache License 2.0)
+* ingress-nginx (Apache License 2.0)
+* PostgreSQL (PostgreSQL License)
+
+Cloud infrastructure (Terraform):
+
+* terraform-aws-modules/vpc/aws  (Apache License 2.0)
+* terraform-aws-modules/eks/aws  (Apache License 2.0)
+* tehcyx/kind                    (MPL 2.0)
+* hashicorp/aws provider         (MPL 2.0)
+* hashicorp/helm provider        (MPL 2.0)
+
+The Go standard library is licensed under the BSD-3-Clause license.
+The Linux kernel and base container images carry their own licenses (GPL,
+BSD, etc.) — `gcr.io/distroless/static-debian12` is Apache 2.0 + the
+Debian/glibc-free base.
