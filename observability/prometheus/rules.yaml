@@ -1,0 +1,16 @@
+groups:
+  - name: api.slo
+    interval: 30s
+    rules:
+      - record: api:request_rate:5m
+        expr: sum(rate(api_requests_total[5m]))
+      - record: api:error_rate:5m
+        expr: sum(rate(api_requests_total{status=~"5.."}[5m])) / sum(rate(api_requests_total[5m]))
+      - alert: APIErrorBudgetBurnFast
+        expr: api:error_rate:5m > (1 - 0.99) * 14.4
+        for: 5m
+        labels:
+          severity: page
+        annotations:
+          summary: "API burning error budget too fast"
+          description: "Error rate {{ $value | humanizePercentage }} over 5m exceeds 14.4x burn rate for 99% SLO."

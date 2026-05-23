@@ -1,0 +1,61 @@
+apiVersion: argoproj.io/v1alpha1
+kind: AppProject
+metadata:
+  name: devsecops
+  namespace: argocd
+spec:
+  description: devsecops-platform applications
+  sourceRepos:
+    - https://github.com/mohidev-tech/devsecops-platform.git
+  destinations:
+    - namespace: "*"
+      server: https://kubernetes.default.svc
+  clusterResourceWhitelist:
+    - group: "*"
+      kind: "*"
+---
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: api
+  namespace: argocd
+spec:
+  project: devsecops
+  source:
+    repoURL: https://github.com/mohidev-tech/devsecops-platform.git
+    targetRevision: main
+    path: deploy/helm/api
+    helm:
+      releaseName: app
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: app
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true
+---
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: worker
+  namespace: argocd
+spec:
+  project: devsecops
+  source:
+    repoURL: https://github.com/mohidev-tech/devsecops-platform.git
+    targetRevision: main
+    path: deploy/helm/worker
+    helm:
+      releaseName: app
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: app
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true

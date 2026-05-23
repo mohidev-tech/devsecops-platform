@@ -1,0 +1,19 @@
+bin/
+dist/
+*.exe
+*.test
+*.out
+coverage.*
+
+# Terraform
+.terraform/
+.terraform.lock.hcl
+*.tfstate
+*.tfstate.backup
+*.tfvars
+crash.log
+
+# IDE
+.idea/
+.vscode/
+.DS_Store
