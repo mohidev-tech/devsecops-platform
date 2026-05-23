@@ -17,15 +17,25 @@ provider "kind" {}
 resource "kind_cluster" "this" {
   name           = "devsecops"
   wait_for_ready = true
-  kind_config = yamlencode({
-    kind       = "Cluster"
-    apiVersion = "kind.x-k8s.io/v1alpha4"
-    nodes = [
-      { role = "control-plane" },
-      { role = "worker" },
-      { role = "worker" },
-    ]
-  })
+
+  # kind_config is a nested block (not an argument) in tehcyx/kind >= 0.4.
+  # Three nodes total: one control-plane + two workers.
+  kind_config {
+    kind        = "Cluster"
+    api_version = "kind.x-k8s.io/v1alpha4"
+
+    node {
+      role = "control-plane"
+    }
+
+    node {
+      role = "worker"
+    }
+
+    node {
+      role = "worker"
+    }
+  }
 }
 
 provider "helm" {
