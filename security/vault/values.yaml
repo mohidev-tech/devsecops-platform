@@ -1,0 +1,35 @@
+# hashicorp/vault helm chart values
+# https://github.com/hashicorp/vault-helm
+#
+# Dev mode: one pod, in-memory storage, root token = "root".
+# Sufficient for local kind/EKS demo. For production: ha.enabled=true,
+# raft storage, auto-unseal, and a real init flow.
+
+server:
+  dev:
+    enabled: true
+    devRootToken: "root"
+  logLevel: "info"
+  resources:
+    requests:
+      cpu: 50m
+      memory: 128Mi
+    limits:
+      cpu: 250m
+      memory: 256Mi
+
+injector:
+  enabled: true
+  metrics:
+    enabled: true
+  resources:
+    requests:
+      cpu: 50m
+      memory: 64Mi
+    limits:
+      cpu: 250m
+      memory: 128Mi
+
+ui:
+  enabled: true
+  serviceType: "ClusterIP"

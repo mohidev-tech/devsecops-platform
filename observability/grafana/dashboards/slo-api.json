@@ -1,0 +1,146 @@
+{
+  "title": "devsecops-platform — API SLO",
+  "uid": "devsecops-api-slo",
+  "tags": ["devsecops-platform", "slo"],
+  "timezone": "",
+  "schemaVersion": 39,
+  "version": 1,
+  "refresh": "30s",
+  "time": { "from": "now-1h", "to": "now" },
+  "panels": [
+    {
+      "id": 1,
+      "type": "stat",
+      "title": "Request rate (5m)",
+      "gridPos": { "h": 6, "w": 6, "x": 0, "y": 0 },
+      "targets": [
+        {
+          "expr": "sum(rate(api_requests_total[5m]))",
+          "refId": "A",
+          "legendFormat": "req/s"
+        }
+      ],
+      "options": {
+        "reduceOptions": { "calcs": ["lastNotNull"] },
+        "graphMode": "area",
+        "colorMode": "value"
+      },
+      "fieldConfig": { "defaults": { "unit": "reqps" } }
+    },
+    {
+      "id": 2,
+      "type": "stat",
+      "title": "Jobs pending",
+      "gridPos": { "h": 6, "w": 6, "x": 6, "y": 0 },
+      "targets": [
+        { "expr": "sum(api_jobs_pending)", "refId": "A" }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              { "color": "green", "value": null },
+              { "color": "yellow", "value": 25 },
+              { "color": "red", "value": 100 }
+            ]
+          }
+        }
+      }
+    },
+    {
+      "id": 3,
+      "type": "stat",
+      "title": "Jobs done (cumulative)",
+      "gridPos": { "h": 6, "w": 6, "x": 12, "y": 0 },
+      "targets": [
+        { "expr": "sum(api_jobs_done)", "refId": "A" }
+      ]
+    },
+    {
+      "id": 4,
+      "type": "stat",
+      "title": "Drain throughput (5m)",
+      "gridPos": { "h": 6, "w": 6, "x": 18, "y": 0 },
+      "targets": [
+        {
+          "expr": "sum(rate(api_jobs_done[5m]))",
+          "refId": "A"
+        }
+      ],
+      "fieldConfig": { "defaults": { "unit": "jobs/s" } }
+    },
+    {
+      "id": 10,
+      "type": "timeseries",
+      "title": "Request rate over time",
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 6 },
+      "targets": [
+        {
+          "expr": "sum(rate(api_requests_total[1m]))",
+          "refId": "A",
+          "legendFormat": "req/s"
+        }
+      ]
+    },
+    {
+      "id": 11,
+      "type": "timeseries",
+      "title": "Queue depth and drain rate",
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 6 },
+      "targets": [
+        {
+          "expr": "sum(api_jobs_pending)",
+          "refId": "A",
+          "legendFormat": "pending"
+        },
+        {
+          "expr": "sum(rate(api_jobs_done[1m]))",
+          "refId": "B",
+          "legendFormat": "drain rate"
+        }
+      ]
+    },
+    {
+      "id": 20,
+      "type": "stat",
+      "title": "SLO compliance (30d, target 99%)",
+      "gridPos": { "h": 6, "w": 12, "x": 0, "y": 14 },
+      "description": "Wire to a real availability SLI in Phase 3 once we add status-code labels to api_requests_total.",
+      "targets": [
+        {
+          "expr": "vector(0.999)",
+          "refId": "A"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "percentunit",
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              { "color": "red", "value": null },
+              { "color": "yellow", "value": 0.99 },
+              { "color": "green", "value": 0.999 }
+            ]
+          }
+        }
+      }
+    },
+    {
+      "id": 21,
+      "type": "timeseries",
+      "title": "Error budget burn rate (placeholder)",
+      "gridPos": { "h": 6, "w": 12, "x": 12, "y": 14 },
+      "description": "Stub. Will plot 5m/1h/6h burn rates once errors are labeled.",
+      "targets": [
+        {
+          "expr": "sum(rate(api_requests_total[5m]))",
+          "refId": "A"
+        }
+      ]
+    }
+  ],
+  "templating": { "list": [] },
+  "annotations": { "list": [] }
+}

@@ -38,6 +38,7 @@ flowchart TB
     end
 
     subgraph K8s["☸️ Kubernetes (kind / EKS)"]
+      Adm{Kyverno<br/>admission}
       API[api service]
       Worker[worker service]
       PG[(Postgres)]
@@ -50,14 +51,15 @@ flowchart TB
     CI --> Lint --> Build --> Scan --> Sign --> GHCR
     Sign --> Repo
     Repo --> Argo
-    Argo -->|sync| K8s
-    Vault -.->|inject secrets| API
-    Vault -.->|inject secrets| Worker
+    Argo -->|sync| Adm
+    Adm -->|allow trusted images| API
+    Adm -->|allow trusted images| Worker
+    Vault -.->|sidecar inject DB creds| API
     API --> PG
     Worker --> PG
-    API --> Prom
-    Worker --> Prom
+    API -->|ServiceMonitor| Prom
     Prom --> Graf
+    Prom -->|14.4x burn rate alert| Alert[📟 Alertmanager]
 ```
 
 ## What this proves
@@ -96,27 +98,50 @@ docs/                    Architecture decision records, runbooks
 ## Quickstart (local)
 
 ```bash
-# Phase 1: bring up cluster + deploy app
-make cluster        # creates kind cluster, installs ingress
-make deploy         # helm install api, worker, postgres
-make smoke          # curl the api, verify worker drained queue
+# Minimum viable: app comes up and processes jobs
+make cluster        # 3-node kind cluster
+make deploy         # build images, install postgres + api + worker
+make smoke          # post 5 jobs, assert worker drained them
 
-# Phase 2: layer on security + GitOps + observability
-make argocd         # bootstrap Argo CD, hand off deploy/ to it
-make vault          # bring up Vault, configure K8s auth, rotate app to use it
-make observe        # Prometheus + Grafana, open SLO dashboard
-
-# Tear down
-make destroy
+# OR: full secure-mode bring-up (everything below in one target)
+make secure-mode
 ```
 
-## Roadmap (phased, per portfolio plan)
+Secure-mode layers on, in order:
 
-- [x] Phase 1a — Scaffold: services, Helm, kind, Terraform local
-- [x] Phase 1b — Functional: api persists jobs to Postgres, worker drains via `FOR UPDATE SKIP LOCKED`, `make deploy && make smoke` is green
-- [ ] Phase 1c — Cloud variant: one short-lived `apply → screenshot → destroy` cycle
-- [ ] Phase 2 — Security & GitOps: Argo CD bootstrap, Vault sidecar injection (replaces plaintext DB creds), Trivy admission policy, Prometheus + SLO dashboard
-- [ ] Stretch — Chaos lab, canary deploys, AI-powered risk scoring on scan results
+```bash
+make policies          # Kyverno admission policies (trusted registry, resource limits)
+make vault-bootstrap   # Vault dev mode + k8s auth + api policy + swap api to vault-injected creds
+make observe           # kube-prometheus-stack + ServiceMonitor + PrometheusRule + SLO dashboard
+make argocd            # Argo CD with app-of-apps; merge-to-main now deploys
+```
+
+```bash
+make destroy           # tear down the kind cluster
+```
+
+## Cloud variant — one-time demo
+
+```bash
+cd infra/terraform/cloud
+terraform apply -auto-approve     # ~10 min, ~$0.15/hour
+make deploy && make smoke          # same Helm charts on EKS
+terraform destroy -auto-approve   # ALWAYS run this when done
+```
+
+See [infra/terraform/cloud/README.md](infra/terraform/cloud/README.md) for the full cost breakdown.
+
+## Roadmap
+
+- [x] **Phase 1a** — Scaffold: services, Helm, kind, Terraform local
+- [x] **Phase 1b** — Functional: api persists jobs to Postgres, worker drains via `FOR UPDATE SKIP LOCKED`, `make deploy && make smoke` is green
+- [x] **Phase 1c** — Cloud variant: EKS via Terraform with public-subnet/SPOT cost discipline
+- [x] **Phase 2a** — Vault sidecar injection replaces plaintext DB creds (ADR 0004)
+- [x] **Phase 2b** — Kyverno admission policies: trusted-registry + require-resources
+- [x] **Phase 2c** — Argo CD app-of-apps wiring `deploy/argocd/apps/*`
+- [x] **Phase 2d** — kube-prometheus-stack + ServiceMonitor + 14.4x burn-rate alert + Grafana SLO dashboard
+- [ ] **Phase 3 (satellite)** — `secure-supply-chain`: cosign-signed images, SBOM at release, admission verification
+- [ ] **Stretch** — Chaos lab, canary deploys, AI risk scoring on scan results
 
 See [docs/adr/](docs/adr/) for architecture decisions.
 

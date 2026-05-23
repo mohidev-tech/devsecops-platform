@@ -1,0 +1,36 @@
+apiVersion: kyverno.io/v1
+kind: ClusterPolicy
+metadata:
+  name: require-resources
+  annotations:
+    policies.kyverno.io/title: Require resource requests and limits
+    policies.kyverno.io/category: Best Practices
+    policies.kyverno.io/description: >-
+      Pods without resources can starve neighbors and break HPA math.
+      Enforced everywhere except kube-system and the platform namespaces
+      whose charts we don't own.
+spec:
+  validationFailureAction: Enforce
+  background: true
+  rules:
+    - name: require-cpu-mem-requests-limits
+      match:
+        any:
+          - resources:
+              kinds: [Pod]
+      exclude:
+        any:
+          - resources:
+              namespaces: [kube-system, kube-public, kyverno, vault, argocd, monitoring]
+      validate:
+        message: containers must declare resources.requests and resources.limits
+        pattern:
+          spec:
+            containers:
+              - resources:
+                  requests:
+                    cpu: "?*"
+                    memory: "?*"
+                  limits:
+                    cpu: "?*"
+                    memory: "?*"

@@ -1,3 +1,4 @@
+---
 apiVersion: argoproj.io/v1alpha1
 kind: AppProject
 metadata:
@@ -13,49 +14,29 @@ spec:
   clusterResourceWhitelist:
     - group: "*"
       kind: "*"
+  namespaceResourceWhitelist:
+    - group: "*"
+      kind: "*"
 ---
+# Root app-of-apps. Apply this one manifest and Argo CD bootstraps every
+# child Application from deploy/argocd/apps/.
 apiVersion: argoproj.io/v1alpha1
 kind: Application
 metadata:
-  name: api
+  name: root
   namespace: argocd
+  finalizers:
+    - resources-finalizer.argocd.argoproj.io
 spec:
   project: devsecops
   source:
     repoURL: https://github.com/mohidev-tech/devsecops-platform.git
     targetRevision: main
-    path: deploy/helm/api
-    helm:
-      releaseName: app
+    path: deploy/argocd/apps
   destination:
     server: https://kubernetes.default.svc
-    namespace: app
+    namespace: argocd
   syncPolicy:
     automated:
       prune: true
       selfHeal: true
-    syncOptions:
-      - CreateNamespace=true
----
-apiVersion: argoproj.io/v1alpha1
-kind: Application
-metadata:
-  name: worker
-  namespace: argocd
-spec:
-  project: devsecops
-  source:
-    repoURL: https://github.com/mohidev-tech/devsecops-platform.git
-    targetRevision: main
-    path: deploy/helm/worker
-    helm:
-      releaseName: app
-  destination:
-    server: https://kubernetes.default.svc
-    namespace: app
-  syncPolicy:
-    automated:
-      prune: true
-      selfHeal: true
-    syncOptions:
-      - CreateNamespace=true

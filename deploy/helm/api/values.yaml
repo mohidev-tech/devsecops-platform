@@ -41,7 +41,32 @@ networkPolicy:
   enabled: true
 
 database:
-  # Name of the Postgres release whose secret carries DATABASE_URL.
-  # Default matches `helm install app deploy/helm/postgres`.
+  # Phase 1: api reads DATABASE_URL from a plaintext Kubernetes Secret.
+  # Phase 2 (vault.enabled=true): vault-agent injects creds into the pod
+  # filesystem and the env var is sourced from /vault/secrets/database-url.
   secretName: app-postgres
   secretKey: DATABASE_URL
+
+vault:
+  # Toggle Phase 2 secret-injection. When true:
+  #   - serviceAccount.name = api  (matched by Vault auth role)
+  #   - pod annotations request vault-agent injection of secret/app/db
+  #   - DATABASE_URL is sourced from a file, not the K8s Secret
+  enabled: false
+  role: api
+  secretPath: secret/data/app/db
+
+serviceAccount:
+  # When vault.enabled, the SA name MUST match the kubernetes auth binding.
+  create: true
+  name: api
+
+serviceMonitor:
+  # Creates a ServiceMonitor for Prometheus to scrape /metrics.
+  # Requires the kube-prometheus-stack CRDs. Off by default so plain Helm
+  # installs without monitoring still succeed.
+  enabled: false
+  interval: 15s
+
+prometheusRule:
+  enabled: false

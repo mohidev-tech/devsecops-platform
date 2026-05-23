@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"os"
 	"os/signal"
+	"strings"
 	"syscall"
 	"time"
 
@@ -17,15 +18,16 @@ import (
 func main() {
 	logger := slog.New(slog.NewJSONHandler(os.Stdout, nil))
 
-	dsn := os.Getenv("DATABASE_URL")
-	if dsn == "" {
-		logger.Error("DATABASE_URL is required")
+	dsn, err := resolveDSN()
+	if err != nil {
+		logger.Error("DATABASE_URL resolution failed", "err", err)
 		os.Exit(1)
 	}
 
 	bootCtx, cancelBoot := context.WithTimeout(context.Background(), 30*time.Second)
 	defer cancelBoot()
-	repo, err := jobs.NewPostgresRepo(bootCtx, dsn)
+	var repo *jobs.PostgresRepo
+	repo, err = jobs.NewPostgresRepo(bootCtx, dsn)
 	if err != nil {
 		logger.Error("db init failed", "err", err)
 		os.Exit(1)
@@ -76,4 +78,23 @@ func envOr(k, def string) string {
 		return v
 	}
 	return def
+}
+
+// resolveDSN returns the database connection string from:
+//   1. DATABASE_URL_FILE (used by Vault agent injection — never via shell)
+//   2. DATABASE_URL (plaintext env, Phase 1)
+// Reading from a file is preferred when both are set so secret rotation
+// via the vault-agent template doesn't require a pod restart.
+func resolveDSN() (string, error) {
+	if path := os.Getenv("DATABASE_URL_FILE"); path != "" {
+		b, err := os.ReadFile(path)
+		if err != nil {
+			return "", err
+		}
+		return strings.TrimSpace(string(b)), nil
+	}
+	if v := os.Getenv("DATABASE_URL"); v != "" {
+		return v, nil
+	}
+	return "", errors.New("neither DATABASE_URL_FILE nor DATABASE_URL is set")
 }

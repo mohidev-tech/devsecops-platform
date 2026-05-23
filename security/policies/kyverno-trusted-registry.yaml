@@ -1,0 +1,30 @@
+apiVersion: kyverno.io/v1
+kind: ClusterPolicy
+metadata:
+  name: trusted-registry
+  annotations:
+    policies.kyverno.io/title: Restrict images to trusted registries
+    policies.kyverno.io/category: Supply Chain Security
+    policies.kyverno.io/subject: Pod
+    policies.kyverno.io/description: >-
+      Reject pods whose containers come from outside the trusted registry path.
+      Pairs with cosign verification in Phase 3 (secure-supply-chain repo) once
+      signed images are published.
+spec:
+  validationFailureAction: Enforce
+  background: true
+  rules:
+    - name: ghcr-only-in-app-namespaces
+      match:
+        any:
+          - resources:
+              kinds: [Pod]
+              namespaces: [app, default]
+      validate:
+        message: >-
+          image {{ request.object.spec.containers[].image }} is not from a
+          trusted registry. Allowed: ghcr.io/mohidev-tech/*, postgres:*
+        pattern:
+          spec:
+            containers:
+              - image: "ghcr.io/mohidev-tech/* | postgres:* | docker.io/library/postgres:*"

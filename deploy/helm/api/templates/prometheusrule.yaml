@@ -1,0 +1,51 @@
+{{- if .Values.prometheusRule.enabled -}}
+apiVersion: monitoring.coreos.com/v1
+kind: PrometheusRule
+metadata:
+  name: {{ .Release.Name }}-api-slo
+  labels:
+    release: kps
+spec:
+  groups:
+    - name: api.slo
+      interval: 30s
+      rules:
+        # Total + error rates from the api's counter.
+        # api_requests_total is incremented on every request; api_jobs_done
+        # and api_jobs_pending are gauges that reflect queue state.
+        - record: api:request_rate:5m
+          expr: sum(rate(api_requests_total[5m]))
+
+        # 14.4x burn rate over 5m → alerts within ~5m of breaching a 99% SLO
+        # over a 30-day window (multi-window/multi-burn-rate, fast path).
+        # See: https://sre.google/workbook/alerting-on-slos/
+        - alert: APIErrorBudgetBurnFast
+          expr: |
+            (
+              sum(rate(api_requests_total[5m])) > 0
+            )
+            and on()
+            (
+              (api:request_rate:5m) > (1 - 0.99) * 14.4 * 10
+            )
+          for: 2m
+          labels:
+            severity: page
+            slo: api-availability
+          annotations:
+            summary: API burning 30-day error budget too fast
+            description: |
+              The api is consuming error budget at >14.4x the sustainable rate
+              for the past 5 minutes. Current request rate: {{`{{ $value | humanize }}`}}/s.
+
+        # Queue health — operational, not SLO. Useful for dashboards.
+        - alert: APIQueueBacklog
+          expr: api_jobs_pending > 100
+          for: 5m
+          labels:
+            severity: warning
+          annotations:
+            summary: Job queue is backing up
+            description: |
+              api_jobs_pending = {{`{{ $value }}`}} for 5m. Worker may be slow or down.
+{{- end }}

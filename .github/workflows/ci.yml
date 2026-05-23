@@ -42,12 +42,15 @@ jobs:
 
   terraform-fmt:
     runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        env: [local, cloud]
     steps:
       - uses: actions/checkout@v4
       - uses: hashicorp/setup-terraform@v3
-      - run: terraform -chdir=infra/terraform/local fmt -check
-      - run: terraform -chdir=infra/terraform/local init -backend=false
-      - run: terraform -chdir=infra/terraform/local validate
+      - run: terraform -chdir=infra/terraform/${{ matrix.env }} fmt -check
+      - run: terraform -chdir=infra/terraform/${{ matrix.env }} init -backend=false
+      - run: terraform -chdir=infra/terraform/${{ matrix.env }} validate
 
   build-scan:
     runs-on: ubuntu-latest

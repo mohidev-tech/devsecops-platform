@@ -1,0 +1,54 @@
+# kube-prometheus-stack helm values
+# https://github.com/prometheus-community/helm-charts/tree/main/charts/kube-prometheus-stack
+#
+# Install: helm install kps prometheus-community/kube-prometheus-stack -n monitoring -f values.yaml
+
+prometheus:
+  prometheusSpec:
+    serviceMonitorSelectorNilUsesHelmValues: false
+    podMonitorSelectorNilUsesHelmValues: false
+    ruleSelectorNilUsesHelmValues: false
+    retention: 24h
+    resources:
+      requests: { cpu: 100m, memory: 256Mi }
+      limits:   { cpu: 500m, memory: 512Mi }
+
+alertmanager:
+  alertmanagerSpec:
+    resources:
+      requests: { cpu: 25m, memory: 64Mi }
+      limits:   { cpu: 100m, memory: 128Mi }
+
+grafana:
+  adminPassword: admin
+  defaultDashboardsTimezone: browser
+  sidecar:
+    dashboards:
+      enabled: true
+      label: grafana_dashboard
+      labelValue: "1"
+  resources:
+    requests: { cpu: 50m, memory: 128Mi }
+    limits:   { cpu: 250m, memory: 256Mi }
+
+# Disable components that are heavy and not needed for the SLO demo.
+kubeStateMetrics:
+  enabled: true
+nodeExporter:
+  enabled: false
+kubeApiServer:
+  enabled: false
+kubelet:
+  enabled: false
+kubeControllerManager:
+  enabled: false
+coreDns:
+  enabled: false
+kubeDns:
+  enabled: false
+kubeEtcd:
+  enabled: false
+kubeScheduler:
+  enabled: false
+kubeProxy:
+  enabled: false
