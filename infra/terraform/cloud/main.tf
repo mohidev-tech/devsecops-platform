@@ -2,10 +2,10 @@ provider "aws" {
   region = var.region
   default_tags {
     tags = {
-      lifecycle   = "ephemeral"
-      owner       = var.owner
-      project     = "devsecops-platform"
-      managed_by  = "terraform"
+      lifecycle  = "ephemeral"
+      owner      = var.owner
+      project    = "devsecops-platform"
+      managed_by = "terraform"
     }
   }
 }
