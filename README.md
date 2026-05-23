@@ -112,8 +112,10 @@ make destroy
 
 ## Roadmap (phased, per portfolio plan)
 
-- [x] Phase 1 — Core: services, Helm, kind, Terraform local + one cloud `apply→destroy` cycle
-- [ ] Phase 2 — Security & GitOps: Argo CD, Vault, Trivy gate, Prometheus + SLO
+- [x] Phase 1a — Scaffold: services, Helm, kind, Terraform local
+- [x] Phase 1b — Functional: api persists jobs to Postgres, worker drains via `FOR UPDATE SKIP LOCKED`, `make deploy && make smoke` is green
+- [ ] Phase 1c — Cloud variant: one short-lived `apply → screenshot → destroy` cycle
+- [ ] Phase 2 — Security & GitOps: Argo CD bootstrap, Vault sidecar injection (replaces plaintext DB creds), Trivy admission policy, Prometheus + SLO dashboard
 - [ ] Stretch — Chaos lab, canary deploys, AI-powered risk scoring on scan results
 
 See [docs/adr/](docs/adr/) for architecture decisions.

@@ -39,3 +39,9 @@ podSecurityContext:
 
 networkPolicy:
   enabled: true
+
+database:
+  # Name of the Postgres release whose secret carries DATABASE_URL.
+  # Default matches `helm install app deploy/helm/postgres`.
+  secretName: app-postgres
+  secretKey: DATABASE_URL

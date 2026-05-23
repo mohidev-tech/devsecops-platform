@@ -3,49 +3,84 @@ package handlers
 import (
 	"crypto/rand"
 	"encoding/hex"
+	"encoding/json"
+	"io"
 	"log/slog"
 	"net/http"
 	"sync/atomic"
 	"time"
+
+	"github.com/mohidev-tech/devsecops-platform/services/api/internal/jobs"
 )
 
-var (
-	requestsTotal atomic.Uint64
-	jobsEnqueued  atomic.Uint64
-)
+var requestsTotal atomic.Uint64
 
 func Live(w http.ResponseWriter, _ *http.Request) {
 	w.WriteHeader(http.StatusOK)
 	_, _ = w.Write([]byte(`{"status":"live"}`))
 }
 
-func Ready(w http.ResponseWriter, _ *http.Request) {
-	w.WriteHeader(http.StatusOK)
-	_, _ = w.Write([]byte(`{"status":"ready"}`))
+// Ready depends on repo health. Pass a Pinger that errors when DB is unreachable.
+type Pinger interface {
+	PingCheck() error
 }
 
-func Metrics(w http.ResponseWriter, _ *http.Request) {
-	w.Header().Set("Content-Type", "text/plain; version=0.0.4")
-	_, _ = w.Write([]byte(
-		"# HELP api_requests_total Total HTTP requests handled.\n" +
-			"# TYPE api_requests_total counter\n" +
-			"api_requests_total " + u64(requestsTotal.Load()) + "\n" +
-			"# HELP api_jobs_enqueued_total Total jobs enqueued.\n" +
-			"# TYPE api_jobs_enqueued_total counter\n" +
-			"api_jobs_enqueued_total " + u64(jobsEnqueued.Load()) + "\n",
-	))
+func Ready(p Pinger) http.HandlerFunc {
+	return func(w http.ResponseWriter, _ *http.Request) {
+		if p != nil {
+			if err := p.PingCheck(); err != nil {
+				w.WriteHeader(http.StatusServiceUnavailable)
+				_, _ = w.Write([]byte(`{"status":"not ready"}`))
+				return
+			}
+		}
+		w.WriteHeader(http.StatusOK)
+		_, _ = w.Write([]byte(`{"status":"ready"}`))
+	}
 }
 
-func Jobs(logger *slog.Logger) http.HandlerFunc {
+func Metrics(repo jobs.Repo) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		pending, _ := repo.Count(r.Context(), jobs.StatusPending)
+		done, _ := repo.Count(r.Context(), jobs.StatusDone)
+		w.Header().Set("Content-Type", "text/plain; version=0.0.4")
+		_, _ = w.Write([]byte(
+			"# HELP api_requests_total Total HTTP requests handled.\n" +
+				"# TYPE api_requests_total counter\n" +
+				"api_requests_total " + itoa(requestsTotal.Load()) + "\n" +
+				"# HELP api_jobs_pending Number of jobs awaiting processing.\n" +
+				"# TYPE api_jobs_pending gauge\n" +
+				"api_jobs_pending " + itoa(uint64(pending)) + "\n" +
+				"# HELP api_jobs_done Number of jobs completed.\n" +
+				"# TYPE api_jobs_done gauge\n" +
+				"api_jobs_done " + itoa(uint64(done)) + "\n",
+		))
+	}
+}
+
+const maxJobBody = 64 * 1024
+
+func Jobs(logger *slog.Logger, repo jobs.Repo) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		if r.Method != http.MethodPost {
 			http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
 			return
 		}
-		jobsEnqueued.Add(1)
-		logger.Info("job enqueued", "request_id", r.Header.Get("X-Request-ID"))
+		body, err := io.ReadAll(io.LimitReader(r.Body, maxJobBody))
+		if err != nil {
+			http.Error(w, "read body", http.StatusBadRequest)
+			return
+		}
+		id, err := repo.Enqueue(r.Context(), body)
+		if err != nil {
+			logger.Error("enqueue failed", "err", err, "request_id", r.Header.Get("X-Request-ID"))
+			http.Error(w, "enqueue failed", http.StatusInternalServerError)
+			return
+		}
+		logger.Info("job enqueued", "id", id, "request_id", r.Header.Get("X-Request-ID"))
+		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusAccepted)
-		_, _ = w.Write([]byte(`{"status":"accepted"}`))
+		_ = json.NewEncoder(w).Encode(map[string]string{"id": id, "status": "accepted"})
 	}
 }
 
@@ -75,7 +110,7 @@ func WithLogging(logger *slog.Logger, next http.Handler) http.Handler {
 	})
 }
 
-func u64(v uint64) string {
+func itoa(v uint64) string {
 	if v == 0 {
 		return "0"
 	}

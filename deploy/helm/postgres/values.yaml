@@ -1,0 +1,21 @@
+image:
+  repository: postgres
+  tag: "16.3-alpine"
+
+storage:
+  size: 1Gi
+
+auth:
+  # Phase 1: plaintext dev creds — REPLACED BY VAULT IN PHASE 2.
+  # Documented intentionally so the security improvement is visible in git history.
+  database: jobs
+  username: app
+  password: dev-only-replace-in-phase-2
+
+resources:
+  requests:
+    cpu: 100m
+    memory: 128Mi
+  limits:
+    cpu: 500m
+    memory: 256Mi

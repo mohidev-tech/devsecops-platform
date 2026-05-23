@@ -22,3 +22,7 @@ securityContext:
     drop: ["ALL"]
   seccompProfile:
     type: RuntimeDefault
+
+database:
+  secretName: app-postgres
+  secretKey: DATABASE_URL

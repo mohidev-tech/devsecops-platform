@@ -23,7 +23,9 @@ jobs:
       - uses: actions/setup-go@v5
         with:
           go-version: "1.22"
-          cache-dependency-path: services/${{ matrix.service }}/go.sum
+      - name: go mod tidy
+        working-directory: services/${{ matrix.service }}
+        run: go mod tidy
       - name: go vet
         working-directory: services/${{ matrix.service }}
         run: go vet ./...
@@ -36,7 +38,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - uses: azure/setup-helm@v4
-      - run: helm lint deploy/helm/api deploy/helm/worker
+      - run: helm lint deploy/helm/postgres deploy/helm/api deploy/helm/worker
 
   terraform-fmt:
     runs-on: ubuntu-latest
