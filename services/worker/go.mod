@@ -2,4 +2,4 @@ module github.com/mohidev-tech/devsecops-platform/services/worker
 
 go 1.22
 
-require github.com/jackc/pgx/v5 v5.6.0
+require github.com/jackc/pgx/v5 v5.9.2
